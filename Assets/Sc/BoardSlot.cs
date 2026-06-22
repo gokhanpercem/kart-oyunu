@@ -11,12 +11,12 @@ public class BoardSlot : MonoBehaviour
     {
         currentCard = card;
         isOccupied = true;
-        // Kartı tam olarak bu slotun merkezine ışınla/yerleştir
-        // Kartı slotun koordinatına yerleştir ama masanın üstünde durması için Y ekseninde yukarı kaldır!
-        // Buradaki 0.2f değerini kartın kalınlığına göre 0.1f veya 0.3f gibi değiştirebilirsin.
+
+        // KARTIN KENDİSİNE HANGİ SLOTTA OLDUĞUNU BİLDİRİYORUZ (Yeni eklendi)
+        card.assignedSlot = this;
+
+        // Kartı slotun koordinatına yerleştir ama masanın üstünde durması için Y ekseninde yukarı kaldır
         card.transform.position = new Vector3(transform.position.x, transform.position.y + 0.2f, transform.position.z);
-        
-        
     }
 
     // Kart öldüğünde veya yer değiştirdiğinde slotu boşaltmak için
