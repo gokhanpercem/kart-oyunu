@@ -15,8 +15,8 @@ MonoBehaviour:
   cardName: "Kumandan Pusulas\u0131"
   cardType: 3
   synergyGroup: 4
-  attackPower: 0
-  healthPoints: 0
+  attackPower: 6
+  healthPoints: 3
   cardImage: {fileID: 21300000, guid: e726bf870b3cf1045a73eff32a48f0c1, type: 3}
   requiresSpecificCharacter: 1
   altersLayout: 0

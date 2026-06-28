@@ -15,8 +15,8 @@ MonoBehaviour:
   cardName: Siyah asker
   cardType: 1
   synergyGroup: 0
-  attackPower: 2
-  healthPoints: 2
+  attackPower: 4
+  healthPoints: 4
   cardImage: {fileID: 21300000, guid: a7b4883d9529d6b4989b560a34ee7627, type: 3}
   requiresSpecificCharacter: 0
   altersLayout: 0

@@ -15,8 +15,8 @@ MonoBehaviour:
   cardName: Wallace
   cardType: 1
   synergyGroup: 0
-  attackPower: 1
-  healthPoints: 2
+  attackPower: 5
+  healthPoints: 7
   cardImage: {fileID: 21300000, guid: 508cf49984c35254d81c081924918345, type: 3}
   requiresSpecificCharacter: 0
   altersLayout: 0

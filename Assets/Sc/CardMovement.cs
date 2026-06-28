@@ -6,6 +6,15 @@ public class CardMovement : MonoBehaviour
     [Header("Kart Durumu")]
     public bool isPlacedOnSlot = false;
 
+    [Header("Geri Dönüş Hafızası")]
+    public Vector3 originalHandPosition;
+
+    [Header("Titreme Efekti (Pusula)")]
+    public bool isShaking = false; // Kart şu an titriyor mu?
+    public float shakeSpeed = 25f; // Titreme hızı
+    public float shakeAmount = 3f; // Ne kadar şiddetli titreyeceği (Açı)
+    private Quaternion originalRotation; // Kartın ilk düz açısı
+
     private bool isDragging = false;
     private Vector3 startPosition;
     private CardDisplay cardDisplay;
@@ -20,10 +29,29 @@ public class CardMovement : MonoBehaviour
         cardCollider = GetComponent<Collider>();
         startPosition = transform.position;
         cardLayerMask = LayerMask.GetMask("Card");
+
+        originalHandPosition = transform.position;
+
+        // Kartın oyun başındaki düz duruş açısını hafızaya al
+        originalRotation = transform.rotation;
     }
 
     void Update()
     {
+        // === TİTREME MOTORU ===
+        // Eğer kartın titremesi gerekiyorsa ve o an fareyle sürüklenmiyorsa salla
+        if (isShaking && !isDragging)
+        {
+            float angle = Mathf.Sin(Time.time * shakeSpeed) * shakeAmount;
+            transform.rotation = originalRotation * Quaternion.Euler(0, 0, angle);
+        }
+        else if (!isShaking && transform.rotation != originalRotation && !isDragging)
+        {
+            // Titremesi bittiyse ve düz değilse, açıyı sıfırla
+            transform.rotation = originalRotation;
+        }
+        // =======================
+
         if (GameManager.Instance.currentTurn == TurnOwner.NPC)
         {
             if (isDragging) HandleMouseUp();
@@ -48,7 +76,23 @@ public class CardMovement : MonoBehaviour
                     }
                     else
                     {
-                        // KURAL KİLİDİ: GameManager "artık kart koyamazsın" diyorsa sürüklemeyi reddet!
+                        if (cardDisplay != null && cardDisplay.cardData != null)
+                        {
+                            string currentCardName = cardDisplay.cardData.cardName.Trim().ToLower();
+
+                            if (currentCardName == "kayıp amiral" && !GameManager.Instance.isAdmiralForced)
+                            {
+                                Debug.LogWarning("Önce Amiralin Pusulası strateji kartını kullanmalısın!");
+                                return;
+                            }
+
+                            if (GameManager.Instance.isAdmiralForced && currentCardName != "kayıp amiral")
+                            {
+                                Debug.LogWarning("Zorunlu olarak Kayıp Amiral'i sahaya sürmelisin!");
+                                return;
+                            }
+                        }
+
                         if (!GameManager.Instance.canPlayerPlaceCard)
                         {
                             Debug.Log("Kart koyma hakkınız bitti veya 6 karta ulaştınız! Önce saldırmalısınız.");
@@ -56,6 +100,10 @@ public class CardMovement : MonoBehaviour
                         }
 
                         isDragging = true;
+
+                        // Sürüklemeye başlandığı an titremeyi iptal et ve kartı düzelt
+                        transform.rotation = originalRotation;
+
                         zCoord = Camera.main.WorldToScreenPoint(transform.position).z;
                         offset = transform.position - GetMouseWorldPos(mousePosition);
                     }
@@ -110,11 +158,33 @@ public class CardMovement : MonoBehaviour
             startPosition = transform.position;
             isPlacedOnSlot = true;
 
+            // KART MASAYA KONULDU: Titremeyi tamamen durdur
+            isShaking = false;
+            transform.rotation = originalRotation;
+
             GameManager.Instance.CardPlaced(TurnOwner.Player);
         }
         else
         {
             transform.position = startPosition;
+            Debug.LogWarning("Kart yuvaya oturtulamadı! Ya masaya çok uzak bıraktın ya da slotlar hala dolu.");
         }
+    }
+
+    public void ReturnToHand()
+    {
+        if (isPlacedOnSlot && cardDisplay != null && cardDisplay.assignedSlot != null)
+        {
+            cardDisplay.assignedSlot.isOccupied = false;
+            cardDisplay.assignedSlot.currentCard = null;
+            cardDisplay.assignedSlot = null;
+        }
+
+        transform.position = originalHandPosition;
+        startPosition = originalHandPosition;
+        isPlacedOnSlot = false;
+
+        // KART ELİMİZE DÖNDÜ: Titremeyi Başlat!
+        isShaking = true;
     }
 }

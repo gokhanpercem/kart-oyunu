@@ -15,8 +15,8 @@ MonoBehaviour:
   cardName: pusula
   cardType: 3
   synergyGroup: 3
-  attackPower: 0
-  healthPoints: 0
+  attackPower: 5
+  healthPoints: 7
   cardImage: {fileID: 21300000, guid: 9567d0f90c566394f9a9e13efd4f1825, type: 3}
   requiresSpecificCharacter: 1
   altersLayout: 1

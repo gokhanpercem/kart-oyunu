@@ -15,8 +15,8 @@ MonoBehaviour:
   cardName: Mistik
   cardType: 1
   synergyGroup: 0
-  attackPower: 8
-  healthPoints: 8
+  attackPower: 6
+  healthPoints: 6
   cardImage: {fileID: 21300000, guid: b7f66ccdaa2329c41bb23046a0037713, type: 3}
   requiresSpecificCharacter: 0
   altersLayout: 0

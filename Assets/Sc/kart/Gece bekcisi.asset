@@ -16,7 +16,7 @@ MonoBehaviour:
   cardType: 1
   synergyGroup: 0
   attackPower: 3
-  healthPoints: 3
+  healthPoints: 9
   cardImage: {fileID: 21300000, guid: 9979365b526cf3f4d8c51b8d49306af0, type: 3}
   requiresSpecificCharacter: 0
   altersLayout: 0

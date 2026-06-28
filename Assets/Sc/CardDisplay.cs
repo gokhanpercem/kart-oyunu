@@ -17,6 +17,9 @@ public class CardDisplay : MonoBehaviour
     public TextMeshProUGUI attackText;
     public TextMeshProUGUI healthText;
 
+    [Header("Aktif Etkiler")]
+    public bool hasSerumActive = false; // Kartta serum var mı?
+
     // KARTIN DURDUĞU SLOT REFERANSI (Yeni eklendi)
     [HideInInspector] public BoardSlot assignedSlot;
 
@@ -90,6 +93,18 @@ public class CardDisplay : MonoBehaviour
 
         // Süre bittiğinde kartı tam olarak eski orijinal yerine oturtuyoruz
         transform.position = originalPosition;
+    }
+
+    // Her tur başında GameManager bu fonksiyonu çağıracak
+    public void ApplySerumEffect()
+    {
+        if (hasSerumActive)
+        {
+            currentAttack += 1;
+            currentHealth += 1;
+            UpdateUI();
+            Debug.Log($"{cardData.cardName} serum sayesinde +1/+1 kazandı!");
+        }
     }
 
 

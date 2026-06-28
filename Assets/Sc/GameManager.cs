@@ -27,6 +27,12 @@ public class GameManager : MonoBehaviour
     public bool canPlayerPlaceCard = true;
     public bool canPlayerAttack = false;
 
+    [Header("Özel Kurallar")]
+    public bool isAdmiralForced = false; // Amiralin pusulası kullanıldı mı?
+
+    [Header("Pusula VIP İzni")]
+    public int freePlacements = 0; // Pusula ile gelen bedava dizme hakkı
+
     [Header("Tahtadaki Slotlar")]
     public List<BoardSlot> playerSlots = new List<BoardSlot>();
     public List<BoardSlot> npcSlots = new List<BoardSlot>();
@@ -36,6 +42,9 @@ public class GameManager : MonoBehaviour
 
     [Header("Savaş Sistemi")]
     public CardDisplay selectedAttackerCard;
+
+    [Header("Geri Dönüş Hafızası")]
+    public Vector3 originalHandPosition;
 
     void Awake()
     {
@@ -49,13 +58,11 @@ public class GameManager : MonoBehaviour
         canPlayerPlaceCard = true;
         canPlayerAttack = false;
 
-        // Oyun başladığında emin olmak için GameOver panelini kapatıyoruz
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
     }
 
     void Update()
     {
-        // Sadece oyuncu turundaysa ve saldırma izni varsa tıklamaları dinle
         if (currentTurn == TurnOwner.Player && canPlayerAttack && currentPhase != GamePhase.GameOver)
         {
             Mouse currentMouse = Mouse.current;
@@ -83,12 +90,10 @@ public class GameManager : MonoBehaviour
 
         int targetSlot = target.assignedSlot.slotIndex;
 
-        // EĞER OYUNCU NPC'YE SALDIRIYORSA
         if (targetSlot == 10) return !IsSlotOccupied(7);
         if (targetSlot == 11) return !IsSlotOccupied(8);
         if (targetSlot == 12) return !IsSlotOccupied(9);
 
-        // EĞER NPC OYUNCUYA SALDIRIYORSA
         if (targetSlot == 1) return !IsSlotOccupied(4);
         if (targetSlot == 2) return !IsSlotOccupied(5);
         if (targetSlot == 3) return !IsSlotOccupied(6);
@@ -112,13 +117,37 @@ public class GameManager : MonoBehaviour
         if (owner == TurnOwner.Player)
         {
             playerPlacedCount++;
-            canPlayerPlaceCard = false;
+            isAdmiralForced = false;
+
+            // ==========================================
+            // VIP DİZİLİM KONTROLÜ (Pusula için)
+            // ==========================================
+            if (freePlacements > 0)
+            {
+                freePlacements--;
+                if (freePlacements > 0)
+                {
+                    canPlayerPlaceCard = true; // Hâlâ dizilecek kart var, izni açık tut!
+                    return;
+                }
+                else
+                {
+                    // Dizilim tamamen bitti! Turu NPC'ye ver.
+                    canPlayerPlaceCard = false;
+                    Debug.Log("Pusula dizilimi tamamlandı! Tur NPC'ye geçiyor.");
+                    ActionExecuted();
+                    return;
+                }
+            }
+
+            canPlayerPlaceCard = false; // Normal 1 kartlık kilit
         }
         else
         {
             npcPlacedCount++;
         }
 
+        // --- Normal Tur Akışı ---
         if (currentPhase == GamePhase.Round1_Placement)
         {
             if (playerPlacedCount >= 3 && npcPlacedCount >= 3)
@@ -152,12 +181,14 @@ public class GameManager : MonoBehaviour
 
     public void SwitchTurn()
     {
-        if (currentPhase == GamePhase.GameOver) return; // Oyun bittiyse tur değişimini durdur
+        if (currentPhase == GamePhase.GameOver) return;
 
         currentTurn = (currentTurn == TurnOwner.Player) ? TurnOwner.NPC : TurnOwner.Player;
 
         if (currentTurn == TurnOwner.Player)
         {
+            TriggerTurnStartEffects(); // Serumlar çalışır
+
             if (currentPhase == GamePhase.Round1_Placement)
             {
                 canPlayerPlaceCard = true;
@@ -212,7 +243,6 @@ public class GameManager : MonoBehaviour
     {
         yield return new WaitForSeconds(0.6f);
 
-        // --- YERLEŞTİRME FAZI (NPC) ---
         if (currentPhase == GamePhase.Round1_Placement)
         {
             BoardSlot targetSlot = GetFirstEmptySlot(npcSlots);
@@ -227,7 +257,6 @@ public class GameManager : MonoBehaviour
             yield return new WaitForSeconds(0.5f);
         }
 
-        // --- SALDIRI FAZI (NPC YAPAY ZEKASI) ---
         List<CardDisplay> npcAttackerPool = GetActiveCards(npcSlots);
         List<CardDisplay> validPlayerTargets = GetValidTargetsForNPC();
 
@@ -332,7 +361,6 @@ public class GameManager : MonoBehaviour
         float elapsedTime = 0f;
         float duration = 0.15f;
 
-        // 1. İleri Atılma
         while (elapsedTime < duration)
         {
             if (attacker == null) yield break;
@@ -342,7 +370,6 @@ public class GameManager : MonoBehaviour
         }
         if (attacker != null) attacker.transform.position = attackDestination;
 
-        // 2. Sadece hedefe hasar ver (Tek taraflı)
         if (attacker != null && target != null)
         {
             target.TakeDamage(attacker.currentAttack);
@@ -350,7 +377,6 @@ public class GameManager : MonoBehaviour
 
         yield return new WaitForSeconds(0.05f);
 
-        // 3. Geri Dönüş
         elapsedTime = 0f;
         float returnDuration = 0.2f;
 
@@ -364,21 +390,17 @@ public class GameManager : MonoBehaviour
 
         if (attacker != null) attacker.transform.position = startPos;
 
-        // 4. Oyun Bitiş Kontrolü
         CheckGameOver();
 
-        // 5. Oyun devam ediyorsa turu atlat
         if (currentPhase != GamePhase.GameOver)
         {
             ActionExecuted();
         }
     }
 
-    // --- OYUN BİTİŞ KONTROLÜ ---
     public void CheckGameOver()
     {
-        if (currentPhase == GamePhase.Round1_Placement)
-            return;
+        if (currentPhase == GamePhase.Round1_Placement) return;
 
         int playerAliveCards = GetActiveCards(playerSlots).Count;
         int npcAliveCards = GetActiveCards(npcSlots).Count;
@@ -388,7 +410,6 @@ public class GameManager : MonoBehaviour
             currentPhase = GamePhase.GameOver;
             canPlayerAttack = false;
             canPlayerPlaceCard = false;
-
             if (gameOverPanel != null) gameOverPanel.SetActive(true);
             if (gameOverText != null) gameOverText.text = "OYUN BİTTİ\nTÜM KARTLARINIZ YOK EDİLDİ!\n[P]";
         }
@@ -397,9 +418,101 @@ public class GameManager : MonoBehaviour
             currentPhase = GamePhase.GameOver;
             canPlayerAttack = false;
             canPlayerPlaceCard = false;
-
             if (gameOverPanel != null) gameOverPanel.SetActive(true);
             if (gameOverText != null) gameOverText.text = "ZAFER!\nDÜŞMAN KARTLARI YOK EDİLDİ!\n[P]";
         }
+    }
+
+    public bool IsCharacterOnBoard(string characterName, TurnOwner owner)
+    {
+        List<BoardSlot> targetSlots = (owner == TurnOwner.Player) ? playerSlots : npcSlots;
+        string searchName = characterName.Trim().ToLower();
+
+        foreach (var slot in targetSlots)
+        {
+            if (slot.isOccupied && slot.currentCard != null)
+            {
+                string boardCardName = slot.currentCard.cardData.cardName.Trim().ToLower();
+                if (boardCardName == searchName) return true;
+            }
+        }
+        return false;
+    }
+
+    private void TriggerTurnStartEffects()
+    {
+        foreach (var slot in playerSlots)
+        {
+            if (slot.isOccupied && slot.currentCard != null)
+            {
+                slot.currentCard.ApplySerumEffect();
+            }
+        }
+    }
+
+    public void RecallAllPlayerCards()
+    {
+        int recalledCount = 0;
+        foreach (var slot in playerSlots)
+        {
+            if (slot.isOccupied && slot.currentCard != null)
+            {
+                CardMovement movement = slot.currentCard.GetComponent<CardMovement>();
+                if (movement != null)
+                {
+                    movement.ReturnToHand();
+                    recalledCount++;
+                }
+
+                // Slotları KESİN olarak boşaltıyoruz
+                slot.isOccupied = false;
+                slot.currentCard = null;
+            }
+        }
+
+        playerPlacedCount -= recalledCount;
+        if (playerPlacedCount < 0) playerPlacedCount = 0;
+
+        // OYUNCUYA BEDAVA HAK VERİYORUZ
+        freePlacements = recalledCount;
+        canPlayerPlaceCard = true;
+        canPlayerAttack = false;
+
+        Debug.Log($"Pusula kullanıldı! {recalledCount} kart geri döndü. Tur bitmeden hepsini sırayla geri dizin.");
+    }
+
+    public void ShuffleNPCCards()
+    {
+        List<BoardSlot> occupiedSlots = new List<BoardSlot>();
+        List<CardDisplay> npcCardsOnBoard = new List<CardDisplay>();
+
+        foreach (var slot in npcSlots)
+        {
+            if (slot.isOccupied && slot.currentCard != null)
+            {
+                occupiedSlots.Add(slot);
+                npcCardsOnBoard.Add(slot.currentCard);
+            }
+        }
+
+        if (npcCardsOnBoard.Count <= 1) return;
+
+        foreach (var slot in occupiedSlots) slot.ClearSlot();
+
+        for (int i = 0; i < npcCardsOnBoard.Count; i++)
+        {
+            int randomIndex = Random.Range(i, occupiedSlots.Count);
+
+            BoardSlot tempSlot = occupiedSlots[i];
+            occupiedSlots[i] = occupiedSlots[randomIndex];
+            occupiedSlots[randomIndex] = tempSlot;
+
+            BoardSlot targetSlot = occupiedSlots[i];
+            CardDisplay cardToPlace = npcCardsOnBoard[i];
+
+            targetSlot.PlaceCard(cardToPlace);
+            cardToPlace.transform.position = targetSlot.transform.position + Vector3.up * 0.2f;
+        }
+        Debug.Log("Bozuk Pusula kullanıldı! NPC kartlarının yerleri rastgele değişti.");
     }
 }
